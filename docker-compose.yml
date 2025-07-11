@@ -5,10 +5,10 @@ services:
     image: mysql:8.0
     container_name: website_crawler_mysql
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: website_crawler
-      MYSQL_USER: crawler
-      MYSQL_PASSWORD: crawlerpass
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     ports:
       - "3306:3306"
     volumes:
@@ -28,7 +28,7 @@ services:
       DB_USER: crawler
       DB_PASSWORD: crawlerpass
       DB_NAME: website_crawler
-      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      JWT_SECRET: ${JWT_SECRET}
       PORT: 8080
     ports:
       - "8080:8080"
@@ -47,7 +47,7 @@ services:
       target: dev
     container_name: website_crawler_frontend
     environment:
-      VITE_API_URL: http://localhost:8080
+      VITE_API_URL: ${VITE_API_URL}
     ports:
       - "5173:5173"
     command: npm run dev -- --host

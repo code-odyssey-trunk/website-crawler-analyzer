@@ -21,5 +21,5 @@ FROM nginx:alpine AS prod
 WORKDIR /app
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/nginx.conf
-EXPOSE 3000
+EXPOSE 5173
 CMD ["nginx", "-g", "daemon off;"] 

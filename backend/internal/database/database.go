@@ -7,6 +7,7 @@ import (
 
 	"website-crawler/internal/models"
 
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -45,9 +46,17 @@ func InitDB() (*gorm.DB, error) {
 	var userCount int64
 	db.Model(&models.User{}).Count(&userCount)
 	if userCount == 0 {
+		adminPassword := os.Getenv("ADMIN_PASSWORD")
+		if adminPassword == "" {
+			log.Fatal("ADMIN_PASSWORD env variable must be set for default admin user")
+		}
+		hashed, err := bcrypt.GenerateFromPassword([]byte(adminPassword), bcrypt.DefaultCost)
+		if err != nil {
+			log.Fatal("Failed to hash admin password:", err)
+		}
 		defaultUser := models.User{
 			Email:    "admin@example.com",
-			Password: "$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi", // password
+			Password: string(hashed),
 		}
 		if err := db.Create(&defaultUser).Error; err != nil {
 			log.Printf("Failed to create default user: %v", err)
@@ -63,4 +72,4 @@ func InitDB() (*gorm.DB, error) {
 // GetDB returns the database instance
 func GetDB() *gorm.DB {
 	return DB
-} 
+}

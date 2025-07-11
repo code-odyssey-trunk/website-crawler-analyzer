@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { urlAPI } from '../services/api'
 import type { URL, URLListResponse } from '../types'
 
 const Dashboard: React.FC = () => {
+  const navigate = useNavigate()
   const [urls, setUrls] = useState<URL[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -12,6 +14,8 @@ const Dashboard: React.FC = () => {
   const [selectedUrls, setSelectedUrls] = useState<Set<number>>(new Set())
   const [newUrl, setNewUrl] = useState('')
   const [addingUrl, setAddingUrl] = useState(false)
+  const [sortBy, setSortBy] = useState('created_at')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -30,8 +34,8 @@ const Dashboard: React.FC = () => {
         page: currentPage,
         page_size: pageSize,
         search: searchTerm || undefined,
-        sort_by: 'created_at',
-        sort_order: 'desc'
+        sort_by: sortBy,
+        sort_order: sortOrder
       })
       setUrls(response.urls)
       setTotalPages(response.total_pages)
@@ -140,10 +144,25 @@ const Dashboard: React.FC = () => {
     }
   }
 
+  // Handle sorting
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortBy(column)
+      setSortOrder('desc')
+    }
+  }
+
+  // Navigate to detail page
+  const handleRowClick = (urlId: number) => {
+    navigate(`/url/${urlId}`)
+  }
+
   // Effects
   useEffect(() => {
     fetchUrls()
-  }, [currentPage, searchTerm])
+  }, [currentPage, searchTerm, sortBy, sortOrder])
 
   // Status badge component
   const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
@@ -159,6 +178,14 @@ const Dashboard: React.FC = () => {
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </span>
     )
+  }
+
+  // Sort indicator component
+  const SortIndicator: React.FC<{ column: string }> = ({ column }) => {
+    if (sortBy !== column) {
+      return <span className="text-gray-400">↕</span>
+    }
+    return <span className="text-blue-600">{sortOrder === 'asc' ? '↑' : '↓'}</span>
   }
 
   if (loading && urls.length === 0) {
@@ -365,14 +392,50 @@ const Dashboard: React.FC = () => {
                       className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    URL
+                  <th 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort('url')}
+                  >
+                    <div className="flex items-center gap-1">
+                      URL
+                      <SortIndicator column="url" />
+                    </div>
+                  </th>
+                  <th 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort('status')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Status
+                      <SortIndicator column="status" />
+                    </div>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                    Title
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Created
+                    HTML Version
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Internal Links
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    External Links
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Broken Links
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Login Form
+                  </th>
+                  <th 
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    onClick={() => handleSort('created_at')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Created
+                      <SortIndicator column="created_at" />
+                    </div>
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
@@ -391,12 +454,43 @@ const Dashboard: React.FC = () => {
                       />
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900 truncate max-w-md">
+                      <div 
+                        className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer truncate max-w-xs"
+                        onClick={() => handleRowClick(url.id)}
+                      >
                         {url.url}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <StatusBadge status={url.status} />
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-900 truncate max-w-xs">
+                        {url.analysis?.title || '-'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {url.analysis?.html_version || '-'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {url.analysis?.internal_links || 0}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {url.analysis?.external_links || 0}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {url.analysis?.inaccessible_links || 0}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {url.analysis?.has_login_form ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          Yes
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                          No
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {new Date(url.created_at).toLocaleDateString()}

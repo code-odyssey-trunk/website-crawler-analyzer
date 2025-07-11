@@ -91,10 +91,10 @@ const URLDetail: React.FC = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-7xl mx-auto">
+        <div className="w-full">
           <div className="animate-pulse">
             <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 w-full">
               <div className="h-64 bg-gray-200 rounded"></div>
               <div className="h-64 bg-gray-200 rounded"></div>
               <div className="h-64 bg-gray-200 rounded"></div>
@@ -109,7 +109,7 @@ const URLDetail: React.FC = () => {
   if (error || !url) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-7xl mx-auto">
+        <div className="w-full">
           <div className="text-center py-12">
             <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -118,7 +118,7 @@ const URLDetail: React.FC = () => {
             <p className="mt-1 text-sm text-gray-500">{error || 'URL not found'}</p>
             <div className="mt-6">
               <button
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/')} 
                 className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
               >
                 Back to Dashboard
@@ -136,13 +136,13 @@ const URLDetail: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
+      <div className="w-full">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
               <button
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/')} 
                 className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-4"
               >
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { urlAPI } from '../services/api'
 import { useWebSocket } from '../hooks/useWebSocket'
 import SearchBox from '../components/SearchBox'
+import ConfirmationModal from '../components/ConfirmationModal'
 import type { URL, URLListResponse, CrawlStatus } from '../types'
 
 const Dashboard: React.FC = () => {
@@ -25,6 +26,9 @@ const Dashboard: React.FC = () => {
     completed: 0,
     failed: 0
   })
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [urlToDelete, setUrlToDelete] = useState<number | null>(null)
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false)
 
   const pageSize = 10
 
@@ -142,22 +146,32 @@ const Dashboard: React.FC = () => {
 
   // Delete URL
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this URL?')) return
+    setUrlToDelete(id)
+    setShowDeleteModal(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!urlToDelete) return
 
     try {
-      await urlAPI.delete(id)
+      await urlAPI.delete(urlToDelete)
       fetchUrls()
     } catch (err) {
       setError('Failed to delete URL')
       console.error('Error deleting URL:', err)
+    } finally {
+      setUrlToDelete(null)
+      setShowDeleteModal(false)
     }
   }
 
   // Bulk actions
   const handleBulkDelete = async () => {
     if (selectedUrls.size === 0) return
-    if (!confirm(`Are you sure you want to delete ${selectedUrls.size} URLs?`)) return
+    setShowBulkDeleteModal(true)
+  }
 
+  const handleBulkDeleteConfirm = async () => {
     try {
       await urlAPI.bulkDelete({ url_ids: Array.from(selectedUrls) })
       setSelectedUrls(new Set())
@@ -165,6 +179,8 @@ const Dashboard: React.FC = () => {
     } catch (err) {
       setError('Failed to delete URLs')
       console.error('Error bulk deleting URLs:', err)
+    } finally {
+      setShowBulkDeleteModal(false)
     }
   }
 
@@ -261,7 +277,7 @@ const Dashboard: React.FC = () => {
   if (loading && urls.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-7xl mx-auto">
+        <div className="w-full">
           <div className="animate-pulse">
             <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
@@ -278,10 +294,10 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
+      <div className="w-full">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
               <p className="text-gray-600">Manage and monitor your website crawls</p>
@@ -324,7 +340,7 @@ const Dashboard: React.FC = () => {
         )}
 
         {/* Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8 w-full">
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center">
               <div className="p-2 bg-blue-100 rounded-lg">
@@ -578,15 +594,21 @@ const Dashboard: React.FC = () => {
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleRerun(url.id)}
-                          className="text-blue-600 hover:text-blue-900"
+                          className="text-blue-600 hover:text-blue-900 p-1 rounded-md hover:bg-blue-50 transition-colors duration-200"
+                          title="Rerun analysis"
                         >
-                          Rerun
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
                         </button>
                         <button
                           onClick={() => handleDelete(url.id)}
-                          className="text-red-600 hover:text-red-900"
+                          className="text-red-600 hover:text-red-900 p-1 rounded-md hover:bg-red-50 transition-colors duration-200"
+                          title="Delete URL"
                         >
-                          Delete
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
                         </button>
                       </div>
                     </td>
@@ -633,6 +655,28 @@ const Dashboard: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Confirm Deletion"
+        message={`Are you sure you want to delete URL "${urls.find(url => url.id === urlToDelete)?.url}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
+
+      {/* Bulk Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showBulkDeleteModal}
+        onClose={() => setShowBulkDeleteModal(false)}
+        onConfirm={handleBulkDeleteConfirm}
+        title="Confirm Bulk Deletion"
+        message={`Are you sure you want to delete ${selectedUrls.size} URLs? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
     </div>
   )
 }

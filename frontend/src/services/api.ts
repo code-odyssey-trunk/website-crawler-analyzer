@@ -33,9 +33,15 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
-      window.location.href = '/login'
+      // Don't redirect for auth endpoints (login/register) to allow error display
+      const isAuthEndpoint = error.config?.url?.includes('/api/auth/login') || 
+                            error.config?.url?.includes('/api/auth/register')
+      
+      if (!isAuthEndpoint) {
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(error)
   }
@@ -50,6 +56,11 @@ export const authAPI = {
 
   register: async (data: RegisterRequest): Promise<AuthResponse> => {
     const response = await api.post('/api/auth/register', data)
+    return response.data
+  },
+
+  logout: async (): Promise<{ message: string }> => {
+    const response = await api.post('/api/auth/logout')
     return response.data
   },
 }

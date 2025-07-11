@@ -104,6 +104,13 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	})
 }
 
+// Logout handles user logout
+func (h *AuthHandler) Logout(c *gin.Context) {
+	// For JWT tokens, logout is typically handled client-side by removing the token
+	// However, we can add server-side logic here if needed (e.g., blacklisting tokens)
+	c.JSON(http.StatusOK, gin.H{"message": "Logged out successfully"})
+}
+
 // generateToken generates a JWT token for the user
 func (h *AuthHandler) generateToken(userID uint) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{

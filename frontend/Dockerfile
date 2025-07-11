@@ -1,30 +1,25 @@
-FROM node:18-alpine AS builder
-
+# --- Base image for both build and dev ---
+FROM node:18-alpine AS base
 WORKDIR /app
-
-# Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci
-
-# Copy source code
+# --- Development image (hot-reload) ---
+FROM base AS dev
+RUN npm install
 COPY . .
+EXPOSE 5173
+CMD ["npm", "run", "dev", "--", "--host"]
 
-# Build the application
+# --- Production build ---
+FROM base AS builder
+RUN npm ci --only=production
+COPY . .
 RUN npm run build
 
-# Production stage
-FROM nginx:alpine
-
-# Copy built files from builder stage
+# --- Production nginx image ---
+FROM nginx:alpine AS prod
+WORKDIR /app
 COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Copy nginx configuration
 COPY nginx.conf /etc/nginx/nginx.conf
-
-# Expose port
 EXPOSE 3000
-
-# Start nginx
 CMD ["nginx", "-g", "daemon off;"] 

@@ -12,8 +12,8 @@ import (
 func SetupRoutes(r *gin.Engine, db *gorm.DB) {
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(db)
-	urlHandler := handlers.NewURLHandler(db)
 	wsHandler := handlers.NewWebSocketHandler()
+	urlHandler := handlers.NewURLHandler(db, wsHandler)
 
 	// Public routes
 	api := r.Group("/api")

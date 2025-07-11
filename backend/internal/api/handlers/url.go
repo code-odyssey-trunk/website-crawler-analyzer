@@ -17,13 +17,15 @@ import (
 type URLHandler struct {
 	db      *gorm.DB
 	crawler *crawler.CrawlerService
+	ws      *WebSocketHandler
 }
 
 // NewURLHandler creates a new URL handler
-func NewURLHandler(db *gorm.DB) *URLHandler {
+func NewURLHandler(db *gorm.DB, ws *WebSocketHandler) *URLHandler {
 	return &URLHandler{
 		db:      db,
 		crawler: crawler.NewCrawlerService(),
+		ws:      ws,
 	}
 }
 
@@ -237,10 +239,27 @@ func (h *URLHandler) crawlURL(urlID uint, targetURL string) {
 	// Update status to running
 	h.db.Model(&models.URL{ID: urlID}).Update("status", "running")
 
+	// Broadcast running status
+	if h.ws != nil {
+		h.ws.BroadcastStatus(models.CrawlStatus{
+			URLID:  urlID,
+			Status: "running",
+		})
+	}
+
 	// Perform crawling
 	analysis, err := h.crawler.CrawlWebsite(ctx, targetURL)
 	if err != nil {
 		h.db.Model(&models.URL{ID: urlID}).Update("status", "failed")
+
+		// Broadcast failed status
+		if h.ws != nil {
+			h.ws.BroadcastStatus(models.CrawlStatus{
+				URLID:  urlID,
+				Status: "failed",
+				Error:  err.Error(),
+			})
+		}
 		return
 	}
 
@@ -248,9 +267,26 @@ func (h *URLHandler) crawlURL(urlID uint, targetURL string) {
 	analysis.URLID = urlID
 	if err := h.db.Save(analysis).Error; err != nil {
 		h.db.Model(&models.URL{ID: urlID}).Update("status", "failed")
+
+		// Broadcast failed status
+		if h.ws != nil {
+			h.ws.BroadcastStatus(models.CrawlStatus{
+				URLID:  urlID,
+				Status: "failed",
+				Error:  err.Error(),
+			})
+		}
 		return
 	}
 
 	// Update URL status to completed
 	h.db.Model(&models.URL{ID: urlID}).Update("status", "completed")
+
+	// Broadcast completed status
+	if h.ws != nil {
+		h.ws.BroadcastStatus(models.CrawlStatus{
+			URLID:  urlID,
+			Status: "completed",
+		})
+	}
 }

@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"sync"
 
@@ -14,7 +13,7 @@ import (
 
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
-		return true // Allow all origins for development
+		return true
 	},
 }
 
@@ -44,7 +43,6 @@ func NewWebSocketHandler() *WebSocketHandler {
 func (h *WebSocketHandler) HandleWebSocket(c *gin.Context) {
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		log.Printf("WebSocket upgrade failed: %v", err)
 		return
 	}
 
@@ -60,20 +58,14 @@ func (h *WebSocketHandler) HandleWebSocket(c *gin.Context) {
 		for {
 			_, message, err := conn.ReadMessage()
 			if err != nil {
-				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-					log.Printf("WebSocket error: %v", err)
-				}
 				break
 			}
 
-			// Handle incoming message if needed
 			var wsMessage models.WebSocketMessage
 			if err := json.Unmarshal(message, &wsMessage); err != nil {
-				log.Printf("Failed to unmarshal WebSocket message: %v", err)
 				continue
 			}
 
-			// Echo message back for now (can be extended for specific commands)
 			h.broadcast <- wsMessage
 		}
 	}()
@@ -87,20 +79,17 @@ func (h *WebSocketHandler) run() {
 			h.mutex.Lock()
 			h.clients[client] = true
 			h.mutex.Unlock()
-			log.Printf("WebSocket client connected. Total clients: %d", len(h.clients))
 
 		case client := <-h.unregister:
 			h.mutex.Lock()
 			delete(h.clients, client)
 			h.mutex.Unlock()
-			log.Printf("WebSocket client disconnected. Total clients: %d", len(h.clients))
 
 		case message := <-h.broadcast:
 			h.mutex.RLock()
 			for client := range h.clients {
 				err := client.WriteJSON(message)
 				if err != nil {
-					log.Printf("Failed to send WebSocket message: %v", err)
 					client.Close()
 					delete(h.clients, client)
 				}

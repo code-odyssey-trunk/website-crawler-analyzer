@@ -28,7 +28,6 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
       wsRef.current = ws
 
       ws.onopen = () => {
-        console.log('WebSocket connected')
         reconnectAttempts.current = 0
         callbacksRef.current.onConnect?.()
       }
@@ -45,15 +44,13 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
               callbacksRef.current.onURLUpdate?.(message.payload)
               break
             default:
-              console.log('Unknown WebSocket message type:', message.type)
+              // Unknown message type
+              break
           }
-        } catch (error) {
-          console.error('Failed to parse WebSocket message:', error)
-        }
+        } catch {}
       }
 
       ws.onclose = (event) => {
-        console.log('WebSocket disconnected:', event.code, event.reason)
         callbacksRef.current.onDisconnect?.()
         
         // Attempt to reconnect if not a normal closure
@@ -62,19 +59,15 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
           const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current - 1), 30000)
           
           reconnectTimeoutRef.current = setTimeout(() => {
-            console.log(`Attempting to reconnect (${reconnectAttempts.current}/${maxReconnectAttempts})`)
             connect()
           }, delay)
         }
       }
 
       ws.onerror = (error) => {
-        console.error('WebSocket error:', error)
         callbacksRef.current.onError?.(error)
       }
-    } catch (error) {
-      console.error('Failed to create WebSocket connection:', error)
-    }
+    } catch {}
   }, [])
 
   const disconnect = useCallback(() => {
@@ -92,8 +85,6 @@ export const useWebSocket = (options: UseWebSocketOptions = {}) => {
   const sendMessage = useCallback((message: WebSocketMessage) => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(message))
-    } else {
-      console.warn('WebSocket is not connected')
     }
   }, [])
 

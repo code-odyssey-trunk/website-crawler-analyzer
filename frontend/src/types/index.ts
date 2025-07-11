@@ -52,6 +52,14 @@ export interface URLListResponse {
   page: number
   page_size: number
   total_pages: number
+  stats: Stats
+}
+
+export interface Stats {
+  pending: number
+  running: number
+  completed: number
+  failed: number
 }
 
 export interface LoginRequest {

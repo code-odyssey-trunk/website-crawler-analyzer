@@ -82,6 +82,15 @@ type URLListResponse struct {
 	Page       int   `json:"page"`
 	PageSize   int   `json:"page_size"`
 	TotalPages int   `json:"total_pages"`
+	Stats      Stats `json:"stats"`
+}
+
+// Stats represents URL status statistics
+type Stats struct {
+	Pending   int64 `json:"pending"`
+	Running   int64 `json:"running"`
+	Completed int64 `json:"completed"`
+	Failed    int64 `json:"failed"`
 }
 
 // BulkActionRequest represents a bulk action request

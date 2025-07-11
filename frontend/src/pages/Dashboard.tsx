@@ -87,13 +87,13 @@ const Dashboard: React.FC = () => {
         return prevPages
       })
       
-      // Calculate stats
+      // Use stats from backend response
       const newStats = {
         total: response.total,
-        pending: response.urls.filter(u => u.status === 'pending').length,
-        running: response.urls.filter(u => u.status === 'running').length,
-        completed: response.urls.filter(u => u.status === 'completed').length,
-        failed: response.urls.filter(u => u.status === 'failed').length
+        pending: response.stats?.pending || 0,
+        running: response.stats?.running || 0,
+        completed: response.stats?.completed || 0,
+        failed: response.stats?.failed || 0
       }
       
       // Only update stats if they've actually changed

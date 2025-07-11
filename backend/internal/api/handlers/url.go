@@ -35,7 +35,7 @@ func (h *URLHandler) ListURLs(c *gin.Context) {
 
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
-	search := c.Query("search")
+	search := c.DefaultQuery("search", "")
 	sortBy := c.DefaultQuery("sort_by", "created_at")
 	sortOrder := c.DefaultQuery("sort_order", "desc")
 
@@ -62,12 +62,44 @@ func (h *URLHandler) ListURLs(c *gin.Context) {
 
 	totalPages := (int(total) + pageSize - 1) / pageSize
 
+	// Calculate statistics
+	var stats models.Stats
+
+	// Count pending URLs
+	pendingQuery := h.db.Model(&models.URL{}).Where("user_id = ? AND status = ?", user.ID, "pending")
+	if search != "" {
+		pendingQuery = pendingQuery.Where("url LIKE ?", "%"+search+"%")
+	}
+	pendingQuery.Count(&stats.Pending)
+
+	// Count running URLs
+	runningQuery := h.db.Model(&models.URL{}).Where("user_id = ? AND status = ?", user.ID, "running")
+	if search != "" {
+		runningQuery = runningQuery.Where("url LIKE ?", "%"+search+"%")
+	}
+	runningQuery.Count(&stats.Running)
+
+	// Count completed URLs
+	completedQuery := h.db.Model(&models.URL{}).Where("user_id = ? AND status = ?", user.ID, "completed")
+	if search != "" {
+		completedQuery = completedQuery.Where("url LIKE ?", "%"+search+"%")
+	}
+	completedQuery.Count(&stats.Completed)
+
+	// Count failed URLs
+	failedQuery := h.db.Model(&models.URL{}).Where("user_id = ? AND status = ?", user.ID, "failed")
+	if search != "" {
+		failedQuery = failedQuery.Where("url LIKE ?", "%"+search+"%")
+	}
+	failedQuery.Count(&stats.Failed)
+
 	c.JSON(http.StatusOK, models.URLListResponse{
 		URLs:       urls,
 		Total:      total,
 		Page:       page,
 		PageSize:   pageSize,
 		TotalPages: totalPages,
+		Stats:      stats,
 	})
 }
 

@@ -20,8 +20,8 @@ const URLDetail: React.FC = () => {
       const urlData = await urlAPI.get(parseInt(id))
       setUrl(urlData)
     } catch (err) {
-      setError('Failed to fetch URL details')
       console.error('Error fetching URL:', err)
+      setError('Failed to fetch URL details')
     } finally {
       setLoading(false)
     }
@@ -47,7 +47,8 @@ const URLDetail: React.FC = () => {
   const parseBrokenLinks = (): BrokenLink[] => {
     if (!url?.analysis?.broken_links) return []
     try {
-      return JSON.parse(url.analysis.broken_links)
+      const parsed = JSON.parse(url.analysis.broken_links)
+      return Array.isArray(parsed) ? parsed : []
     } catch {
       return []
     }
@@ -331,10 +332,10 @@ const URLDetail: React.FC = () => {
         {/* Broken Links Section */}
         <div className="bg-white rounded-lg shadow">
           <div className="px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-medium text-gray-900">Broken Links ({brokenLinks.length})</h3>
+            <h3 className="text-lg font-medium text-gray-900">Broken Links ({brokenLinks?.length || 0})</h3>
           </div>
           <div className="overflow-x-auto">
-            {brokenLinks.length > 0 ? (
+            {brokenLinks && brokenLinks.length > 0 ? (
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>

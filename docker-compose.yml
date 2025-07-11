@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: website_crawler_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: website_crawler
+      MYSQL_USER: crawler
+      MYSQL_PASSWORD: crawlerpass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backend/migrations:/docker-entrypoint-initdb.d
+    networks:
+      - crawler_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: website_crawler_backend
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: crawler
+      DB_PASSWORD: crawlerpass
+      DB_NAME: website_crawler
+      JWT_SECRET: your-super-secret-jwt-key-change-in-production
+      PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mysql
+    volumes:
+      - ./backend:/app
+    networks:
+      - crawler_network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: website_crawler_frontend
+    environment:
+      VITE_API_URL: http://localhost:8080
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - crawler_network
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+
+networks:
+  crawler_network:
+    driver: bridge 

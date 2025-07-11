@@ -15,20 +15,20 @@ type User struct {
 
 // URL represents a URL to be analyzed
 type URL struct {
-	ID          uint      `json:"id" gorm:"primaryKey"`
-	URL         string    `json:"url" gorm:"not null;unique"`
-	Status      string    `json:"status" gorm:"default:'pending'"` // pending, running, completed, failed
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-	UserID      uint      `json:"user_id" gorm:"not null"`
-	User        User      `json:"user"`
-	Analysis    Analysis  `json:"analysis,omitempty"`
+	ID        uint      `json:"id" gorm:"primaryKey"`
+	URL       string    `json:"url" gorm:"not null;unique"`
+	Status    string    `json:"status" gorm:"default:'pending'"` // pending, running, completed, failed
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	UserID    uint      `json:"user_id" gorm:"not null"`
+	User      User      `json:"user"`
+	Analysis  Analysis  `json:"analysis,omitempty"`
 }
 
 // Analysis represents the analysis results for a URL
 type Analysis struct {
 	ID                uint      `json:"id" gorm:"primaryKey"`
-	URLID             uint      `json:"url_id" gorm:"not null"`
+	URLID             uint      `json:"url_id" gorm:"not null;index;constraint:OnDelete:CASCADE;"`
 	HTMLVersion       string    `json:"html_version"`
 	Title             string    `json:"title"`
 	Headings          string    `json:"headings" gorm:"type:json"` // JSON string of heading counts
@@ -100,4 +100,4 @@ type CrawlStatus struct {
 	URLID  uint   `json:"url_id"`
 	Status string `json:"status"`
 	Error  string `json:"error,omitempty"`
-} 
+}

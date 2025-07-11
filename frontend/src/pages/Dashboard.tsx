@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { urlAPI } from '../services/api'
 import { useWebSocket } from '../hooks/useWebSocket'
+import SearchBox from '../components/SearchBox'
 import type { URL, URLListResponse, CrawlStatus } from '../types'
 
 const Dashboard: React.FC = () => {
@@ -47,9 +48,16 @@ const Dashboard: React.FC = () => {
   })
 
   // Fetch URLs
-  const fetchUrls = async () => {
+  const fetchUrls = useCallback(async () => {
     try {
-      setLoading(true)
+      // Only set loading if we're not already loading or if we have URLs
+      setLoading(prevLoading => {
+        if (!prevLoading || urls.length > 0) {
+          return true
+        }
+        return prevLoading
+      })
+      
       const response: URLListResponse = await urlAPI.list({
         page: currentPage,
         page_size: pageSize,
@@ -57,14 +65,43 @@ const Dashboard: React.FC = () => {
         sort_by: sortBy,
         sort_order: sortOrder
       })
-      setUrls(response.urls)
-      setTotalPages(response.total_pages)
-      setStats({
+      // Only update URLs if they've actually changed (more aggressive check)
+      setUrls(prevUrls => {
+        // If both are empty arrays, don't update at all
+        if (prevUrls.length === 0 && response.urls.length === 0) {
+          return prevUrls
+        }
+        // If the arrays are different, update
+        if (prevUrls.length !== response.urls.length || 
+            JSON.stringify(prevUrls.map(u => u.id)) !== JSON.stringify(response.urls.map(u => u.id))) {
+          return response.urls
+        }
+        return prevUrls
+      })
+      
+      // Only update total pages if it actually changed
+      setTotalPages(prevPages => {
+        if (prevPages !== response.total_pages) {
+          return response.total_pages
+        }
+        return prevPages
+      })
+      
+      // Calculate stats
+      const newStats = {
         total: response.total,
         pending: response.urls.filter(u => u.status === 'pending').length,
         running: response.urls.filter(u => u.status === 'running').length,
         completed: response.urls.filter(u => u.status === 'completed').length,
         failed: response.urls.filter(u => u.status === 'failed').length
+      }
+      
+      // Only update stats if they've actually changed
+      setStats(prevStats => {
+        if (JSON.stringify(prevStats) !== JSON.stringify(newStats)) {
+          return newStats
+        }
+        return prevStats
       })
     } catch (err) {
       setError('Failed to fetch URLs')
@@ -72,7 +109,7 @@ const Dashboard: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentPage, pageSize, searchTerm, sortBy, sortOrder])
 
   // Add new URL
   const handleAddUrl = async (e: React.FormEvent) => {
@@ -182,7 +219,20 @@ const Dashboard: React.FC = () => {
   // Effects
   useEffect(() => {
     fetchUrls()
-  }, [currentPage, searchTerm, sortBy, sortOrder])
+  }, [currentPage, sortBy, sortOrder])
+
+  // Debounced search effect
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (currentPage === 1) {
+        fetchUrls()
+      } else {
+        setCurrentPage(1) // Reset to first page when searching
+      }
+    }, 500) // 500ms delay
+
+    return () => clearTimeout(timeoutId)
+  }, [searchTerm])
 
   // Status badge component
   const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
@@ -379,12 +429,10 @@ const Dashboard: React.FC = () => {
           <div className="px-6 py-4 border-b border-gray-200">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex-1">
-                <input
-                  type="text"
+                <SearchBox
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onSearch={setSearchTerm}
                   placeholder="Search URLs..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div className="flex gap-2">

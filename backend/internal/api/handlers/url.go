@@ -47,7 +47,7 @@ func (h *URLHandler) ListURLs(c *gin.Context) {
 	query := h.db.Where("user_id = ?", user.ID)
 
 	if search != "" {
-		query = query.Where("url LIKE ? OR title LIKE ?", "%"+search+"%", "%"+search+"%")
+		query = query.Where("url LIKE ?", "%"+search+"%")
 	}
 
 	// Count total

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { urlAPI } from '../services/api'
-import type { URL, URLListResponse } from '../types'
+import { useWebSocket } from '../hooks/useWebSocket'
+import type { URL, URLListResponse, CrawlStatus } from '../types'
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate()
@@ -25,6 +26,25 @@ const Dashboard: React.FC = () => {
   })
 
   const pageSize = 10
+
+  // WebSocket for real-time updates
+  const { isConnected } = useWebSocket({
+    onCrawlStatus: (status: CrawlStatus) => {
+      // Update the specific URL status in the list
+      setUrls(prevUrls => 
+        prevUrls.map(url => 
+          url.id === status.url_id 
+            ? { ...url, status: status.status as 'pending' | 'running' | 'completed' | 'failed' }
+            : url
+        )
+      )
+      
+      // Refresh the page if we're on the first page to get updated data
+      if (currentPage === 1) {
+        fetchUrls()
+      }
+    }
+  })
 
   // Fetch URLs
   const fetchUrls = async () => {
@@ -211,8 +231,19 @@ const Dashboard: React.FC = () => {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
-          <p className="text-gray-600">Manage and monitor your website crawls</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
+              <p className="text-gray-600">Manage and monitor your website crawls</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* WebSocket Connection Indicator */}
+              <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <span className="text-sm text-gray-500">
+                {isConnected ? 'Live Updates' : 'Offline'}
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Error Alert */}

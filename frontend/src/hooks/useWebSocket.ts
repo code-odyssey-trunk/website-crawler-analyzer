@@ -1,0 +1,110 @@
+import { useEffect, useRef, useCallback } from 'react'
+import type { WebSocketMessage, CrawlStatus } from '../types'
+
+interface UseWebSocketOptions {
+  onCrawlStatus?: (status: CrawlStatus) => void
+  onURLUpdate?: (url: any) => void
+  onConnect?: () => void
+  onDisconnect?: () => void
+  onError?: (error: Event) => void
+}
+
+export const useWebSocket = (options: UseWebSocketOptions = {}) => {
+  const wsRef = useRef<WebSocket | null>(null)
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const reconnectAttempts = useRef(0)
+  const maxReconnectAttempts = 5
+
+  const connect = useCallback(() => {
+    const wsUrl = import.meta.env.VITE_WS_URL || 
+      (import.meta.env.VITE_API_URL || 'http://localhost:8080').replace('http', 'ws') + '/api/ws'
+    
+    try {
+      const ws = new WebSocket(wsUrl)
+      wsRef.current = ws
+
+      ws.onopen = () => {
+        console.log('WebSocket connected')
+        reconnectAttempts.current = 0
+        options.onConnect?.()
+      }
+
+      ws.onmessage = (event) => {
+        try {
+          const message: WebSocketMessage = JSON.parse(event.data)
+          
+          switch (message.type) {
+            case 'crawl_status':
+              options.onCrawlStatus?.(message.payload as CrawlStatus)
+              break
+            case 'url_update':
+              options.onURLUpdate?.(message.payload)
+              break
+            default:
+              console.log('Unknown WebSocket message type:', message.type)
+          }
+        } catch (error) {
+          console.error('Failed to parse WebSocket message:', error)
+        }
+      }
+
+      ws.onclose = (event) => {
+        console.log('WebSocket disconnected:', event.code, event.reason)
+        options.onDisconnect?.()
+        
+        // Attempt to reconnect if not a normal closure
+        if (event.code !== 1000 && reconnectAttempts.current < maxReconnectAttempts) {
+          reconnectAttempts.current++
+          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current - 1), 30000)
+          
+          reconnectTimeoutRef.current = setTimeout(() => {
+            console.log(`Attempting to reconnect (${reconnectAttempts.current}/${maxReconnectAttempts})`)
+            connect()
+          }, delay)
+        }
+      }
+
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error)
+        options.onError?.(error)
+      }
+    } catch (error) {
+      console.error('Failed to create WebSocket connection:', error)
+    }
+  }, [options])
+
+  const disconnect = useCallback(() => {
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current)
+      reconnectTimeoutRef.current = null
+    }
+    
+    if (wsRef.current) {
+      wsRef.current.close(1000, 'Manual disconnect')
+      wsRef.current = null
+    }
+  }, [])
+
+  const sendMessage = useCallback((message: WebSocketMessage) => {
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify(message))
+    } else {
+      console.warn('WebSocket is not connected')
+    }
+  }, [])
+
+  useEffect(() => {
+    connect()
+    
+    return () => {
+      disconnect()
+    }
+  }, [connect, disconnect])
+
+  return {
+    isConnected: wsRef.current?.readyState === WebSocket.OPEN,
+    sendMessage,
+    disconnect,
+    connect
+  }
+} 
